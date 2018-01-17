@@ -3,7 +3,7 @@ library(shinydashboard)
 library(quantmod)
 library(ggplot2)
 
-source("C:/Users/alejandra/Documents/shiny/Portafolio Analysis/VaR.R")
+source("VaR.R")
 
 
 ui <- dashboardPage(
