@@ -1,10 +1,8 @@
-library(shiny)
 library(shinydashboard)
 library(quantmod)
 library(ggplot2)
 
-source("VaR.R")
-
+source('VaR.R')
 
 ui <- dashboardPage(
   
@@ -17,7 +15,7 @@ ui <- dashboardPage(
     ),
     
     hr(),
-    conditionalPanel("input.tabs=='stocks'",
+    conditionalPanel("input.tabs==stocks",
                      fluidRow(
                        column(1),
                        column(10,
@@ -33,7 +31,7 @@ ui <- dashboardPage(
                               hr(),
                               dateRangeInput("dates", 
                                              "Date range",
-                                             start = "2013-01-01", 
+                                             start = as.character(Sys.Date()-365), 
                                              end = as.character(Sys.Date()))
                         
                               )
@@ -69,7 +67,6 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
-  
   output$text1<-renderText(typeof(input$variable))
   
   output$plot <- renderPlot({
@@ -79,9 +76,12 @@ server <- function(input, output) {
     )
     getPrices(input$variable,input$dates[1],input$dates[2],input$VaR)
   })
-
-  }
+  
+  
+  
+}
  
   
 # Run the app
 shinyApp(ui, server)
+
