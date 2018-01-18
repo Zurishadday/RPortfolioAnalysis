@@ -1,11 +1,11 @@
 getPrices<-function(acciones=NULL,from="2014-01-01",to="2017-01-01", typeVaR){
   
-  dataInput <-data.frame(diff(as.matrix(log(data.frame(lapply(
+  dataInput <-data.frame(diff(as.matrix(log(data.frame(na.omit(lapply(
     lapply(acciones,
            getSymbols,src="yahoo",
            from = as.Date(from),
            to = as.Date(to),
-           auto.assign = FALSE),Cl))))))
+           auto.assign = FALSE),Cl)))))))
   
   if(typeVaR=="Historical simulation")   VaR<-Historic.VaR(dataInput,acciones)
   if(typeVaR=="Delta Normal")            VaR<-Delta.VaR(dataInput,acciones)  
@@ -14,7 +14,6 @@ getPrices<-function(acciones=NULL,from="2014-01-01",to="2017-01-01", typeVaR){
   if(typeVaR=="EWMA MonteCarlo")         VaR<-Ewma.MonteCarlo.VaR(dataInput,acciones)
   return(VaR)
 }
-
 Historic.VaR<-function(m,number){
   alpha<-rep(1,length(unlist(strsplit(number, " "))))*50000
   Historica<-as.matrix(m)%*%alpha
@@ -33,7 +32,6 @@ Historic.VaR<-function(m,number){
   
   return(printgg) 
 }
-
 Delta.VaR<-function(Asset,number){
   Cov<-cov(Asset)
   alpha<-rep(1,length(unlist(strsplit(number, " "))))*50000
@@ -61,16 +59,16 @@ Delta.VaR<-function(Asset,number){
   
   return(printgg)
 }
-
 MonteCarlo.VaR<-function(Asset,number){
+  n.simulaciones<-4000
   set.seed(58930123)
   number<-length(unlist(strsplit(number, " ")))
   Cov<-cov(Asset)
   Asset<-as.data.frame(na.omit(Asset))
   L<-chol(Cov)
   Mean<-sapply(Asset,mean)
-  Montecarlo<-matrix(nrow = number,ncol = 10000)
-  for(i in 1:10000){
+  Montecarlo<-matrix(nrow = number,ncol = n.simulaciones)
+  for(i in 1:n.simulaciones){
     Montecarlo[,i] <- Mean + L%*%rnorm(number,0,1)
   }
   Montecarlo<-Montecarlo*50000
@@ -97,8 +95,17 @@ MonteCarlo.VaR<-function(Asset,number){
   return(printgg)
   
 }
-
+Cov.ewma<-function(Asset,lambda,i){
+  
+  if (i==1) return(lambda*as.matrix(t(Asset[i,]))%*%as.matrix(Asset[i,]))
+  else   
+    return(lambda*Cov.ewma(Asset,lambda,i-1)+(1-lambda)*as.matrix(t(Asset[i,]))%*%as.matrix(Asset[i,]))
+  
+  
+}
 Ewma.Delta.VaR<-function(Asset,number){
+  
+  
   Cov.Ewma<-Cov.ewma(Asset,0.94,length(Asset[,1]))
   alpha<-rep(1,length(unlist(strsplit(number, " "))))*50000
   
@@ -117,23 +124,20 @@ Ewma.Delta.VaR<-function(Asset,number){
     annotate("text", label = paste("VaR: $",
                                    as.character(round(-VaR$xmax,2))) ,fontface="bold",
              x = VaR$xmax, y = 600, size = 8, colour = "black")+
-    annotate("text", label = paste("EWMA Desviación Estandar:",
-                                   as.character(round(DesviacionDelta,2))) ,fontface="bold",
-             x = 2900, y = 900, size = 5, colour = "black")+
     labs(title = "EWMA Delta Normal")
   
   return(printgg)
 }
-
 Ewma.MonteCarlo.VaR<-function(Asset,number){
+  n.simulaciones<-4000
   set.seed(58930123)
   number<-length(unlist(strsplit(number, " ")))
   Cov.Ewma<-Cov.ewma(Asset,0.94,length(Asset[,1]))
   Asset<-as.data.frame(na.omit(Asset))
   L<-chol(Cov.Ewma)
   Mean<-sapply(Asset,mean)
-  Montecarlo<-matrix(nrow = number,ncol = 10000)
-  for(i in 1:10000){
+  Montecarlo<-matrix(nrow = number,ncol = n.simulaciones)
+  for(i in 1:n.simulaciones){
     Montecarlo[,i] <- Mean + L%*%rnorm(number,0,1)
   }
   Montecarlo<-Montecarlo*50000
@@ -154,20 +158,8 @@ Ewma.MonteCarlo.VaR<-function(Asset,number){
                             ymin=ymin, ymax=ymax), fill="red", alpha=0.3, inherit.aes = FALSE) +
     annotate("text", label = paste("VaR: ",as.character(round(-VaR$xmax,2))) 
              , x = VaR$xmax, y = 600, size = 8, colour = "black")+
-    annotate("text", label = paste("EWMA Desviación:",
-                                   as.character(round(sd(Montecarlo$Montecarlo),2))) ,
-             fontface="bold"  , x = 2900, y = 900, size = 4, colour = "black")+
     labs(title = "EWMA Montecarlo")
   
   return(printgg)
-  
-}
-
-Cov.ewma<-function(Asset,lambda,i){
-  
-  if (i==1) return(lambda*as.matrix(t(Asset[i,]))%*%as.matrix(Asset[i,]))
-  else   
-    return(lambda*Cov.ewma(Asset,lambda,i-1)+(1-lambda)*as.matrix(t(Asset[i,]))%*%as.matrix(Asset[i,]))
-  
   
 }
